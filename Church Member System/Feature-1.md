@@ -52,34 +52,6 @@
 
 ---
 
-## Assumptions
-
-- What already exists (e.g. Feature 1 auth is on `dev`)
-- What you are deliberately not building yet
-
----
-
-## Edge Cases
-
-- Empty required field → …
-- Cross-user access → …
-- Duplicate / invalid input → …
-
----
-
-## Success Criteria
-
-- **SC-001**: Every Gherkin scenario has at least one automated test before merge
-- **SC-002**: <measurable outcome for this feature>
-
----
-
-## Key Entities
-
-- **Entity**: short description; relationships in plain language
-- **Entity**: …
-
----
 
 ## Data Model Requirements
 
@@ -202,32 +174,10 @@ An authorized user can add and view a member's proffession
 
 ---
 
-## Assumptions
-
-- What already exists (e.g. Feature 1 auth is on `dev`)
-- What you are deliberately not building yet
-
----
-
-## Edge Cases
-
-- Empty required field → …
-- Cross-user access → …
-- Duplicate / invalid input → …
-
----
-
 ## Success Criteria
 
 - **SC-001**: Every Gherkin scenario has at least one automated test before merge
 - **SC-002**: <measurable outcome for this feature>
-
----
-
-## Key Entities
-
-- **Entity**: short description; relationships in plain language
-- **Entity**: …
 
 ---
 
@@ -247,11 +197,6 @@ An authorized user can add and view a member's proffession
 |...................|...................|................................|
 |updated_at	DATETIME|Updated when information changes|...................|
 --------------------------------------------------------------------------
-
-
-
-### Associations (if known)
-- …
 
 ---
 

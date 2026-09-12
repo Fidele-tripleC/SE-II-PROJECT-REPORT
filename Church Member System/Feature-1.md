@@ -52,34 +52,6 @@
 
 ---
 
-## Assumptions
-
-- What already exists (e.g. Feature 1 auth is on `dev`)
-- What you are deliberately not building yet
-
----
-
-## Edge Cases
-
-- Empty required field → …
-- Cross-user access → …
-- Duplicate / invalid input → …
-
----
-
-## Success Criteria
-
-- **SC-001**: Every Gherkin scenario has at least one automated test before merge
-- **SC-002**: <measurable outcome for this feature>
-
----
-
-## Key Entities
-
-- **Entity**: short description; relationships in plain language
-- **Entity**: …
-
----
 
 ## Data Model Requirements
 
@@ -199,38 +171,7 @@ An authorized user can add and view a member's proffession
 **FR-005**:The system MUST allow the church to record the school attended by a child.
 **FR-006**:: The system MUST allow information that is no longer applicable to be updated rather than requiring creation of a duplicate member record.
 
-
 ---
-
-## Assumptions
-
-- What already exists (e.g. Feature 1 auth is on `dev`)
-- What you are deliberately not building yet
-
----
-
-## Edge Cases
-
-- Empty required field → …
-- Cross-user access → …
-- Duplicate / invalid input → …
-
----
-
-## Success Criteria
-
-- **SC-001**: Every Gherkin scenario has at least one automated test before merge
-- **SC-002**: <measurable outcome for this feature>
-
----
-
-## Key Entities
-
-- **Entity**: short description; relationships in plain language
-- **Entity**: …
-
----
-
 ## Data Model Requirements
 
 ### `member_demographics` table
@@ -247,11 +188,6 @@ An authorized user can add and view a member's proffession
 |...................|...................|................................|
 |updated_at	DATETIME|Updated when information changes|...................|
 --------------------------------------------------------------------------
-
-
-
-### Associations (if known)
-- …
 
 ---
 

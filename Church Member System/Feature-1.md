@@ -171,16 +171,7 @@ An authorized user can add and view a member's proffession
 **FR-005**:The system MUST allow the church to record the school attended by a child.
 **FR-006**:: The system MUST allow information that is no longer applicable to be updated rather than requiring creation of a duplicate member record.
 
-
 ---
-
-## Success Criteria
-
-- **SC-001**: Every Gherkin scenario has at least one automated test before merge
-- **SC-002**: <measurable outcome for this feature>
-
----
-
 ## Data Model Requirements
 
 ### `member_demographics` table

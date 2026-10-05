@@ -4,7 +4,7 @@
 **Status:** Draft
 **Created:** 2026-10-04
 **Input:**   Enable Church Administration and staff to manage adult member profiles.
-**Depends on** [feature](\Feature1_Authentication.md)
+**Depends on** [Authentication](\Feature1_Authentication.md)
 **Related:** optional links to ADRs or reference docs
 ---
 ## US-A.2.1: Adult Profile Creation

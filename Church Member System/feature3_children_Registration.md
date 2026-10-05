@@ -4,7 +4,7 @@
 **Status:** Draft
 **Created:** 2026-10-04
 **Input:**   Enable Church Administration and staff to manage child member profiles.
-**Depends on** [feature](\feature2_Adult_Member_Registration.md)
+**Depends on** [Member Registration](\feature2_Adult_Member_Registration.md)
 **Related:** optional links to ADRs or reference docs
 ---
 ## US-A.2.1: child Profile Creation

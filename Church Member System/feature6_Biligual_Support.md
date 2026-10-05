@@ -7,11 +7,11 @@
 **Depends on** [feature](\Feature1_Authentication.md),
 
 **Related to**
- [feature](\Feature1_Authentication.md),
- [feature](\feature2_Adult_Member_Registration.md),
- [feature](\feature3_children_Registration.md),
- [feature](\feature4_ServiceCheck_inand_Security.md),
-**Related:** [feature](\feature5_GeneralManagement)
+ [Authentication](\Feature1_Authentication.md),
+ [Member Registration](\feature2_Adult_Member_Registration.md),
+ [Childrent Registration](\feature3_children_Registration.md),
+ [service checkin](\feature4_ServiceCheck_inand_Security.md),
+**Related:** [General Management](\feature5_GeneralManagement)
 ---
 ## User Stories
 ### US-N.6.1: Session Language Persistence & Global Switcher

@@ -4,8 +4,8 @@
 **Status:** Draft
 **Created:** 2026-10-04
 **Input:**  Enables rapid Sunday service check-in for all church members (Aults and children) via phone number/ name search, track overall attendance.
-**Depends on** [feature](\feature2_Adult_Member_Registration.md),[feature](\feature3_children_Registration.md)
-**Related:** [feature](\feature5_GeneralManagement)
+**Depends on** [Memberegistration]er_Registration.md),[children Registration](\feature3_children_Registration.md)
+**Related:** [General Management](\feature5_GeneralManagement)
 ---
 ## US-A.4.1: General Church member Search Check-In
 **As a**  Usher or Greater

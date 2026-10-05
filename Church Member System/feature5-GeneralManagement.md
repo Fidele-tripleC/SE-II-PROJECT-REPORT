@@ -5,11 +5,11 @@
 **Created:** 2026-10-04
 **Input:** Comprehensive reporting dashboards, attendance analytics across the service dates/types, member demographics, and role management for Church Administratiors in both English and Spanish
 **Depends on**
- [feature](\Feature1_Authentication.md),
- [feature](\feature2_Adult_Member_Registration.md),
- [feature](\feature3_children_Registration.md),
- [feature](\feature4_ServiceCheck_inand_Security.md),
-**Related:** [feature](\feature6_BilingualSupport)
+ [Authentication](\Feature1_Authentication.md),
+ [Adult Registration](\feature2_Adult_Member_Registration.md),
+ [Children Registration](\feature3_children_Registration.md),
+ [Service check in](\feature4_ServiceCheck_inand_Security.md),
+**Related:** [Bilingual Support](\feature6_BilingualSupport)
 ---
 ## User Stories
 ### US-N.1.1: Attendance Reporting and Filtering

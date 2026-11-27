@@ -93,119 +93,6 @@
 - **SC-005**: Invoice hours equal the sum of service quantities
 - **SC-006**: After the invoice is `invoiced`, its lines cannot be changed
 
-## Data Ownership
-
-- A line item belongs to one invoice.
-- A service line also claims one approved time entry.
-- Only an authorized owner/admin or accounting clerk may add, view, remove, or issue lines.
-- Callers outside the business MUST NOT read or change invoice lines.
-
-## API Requirements
-
-| Method | Endpoint | Auth | Purpose |
-|--------|----------|------|---------|
-| `POST` | `/invoice/invoices/:invoiceId/line-items` | Yes | Add a service line or an expense line |
-| `GET` | `/invoice/invoices/:invoiceId/line-items` | Yes | List lines on one invoice |
-| `DELETE` | `/invoice/line-items/:id` | Yes | Remove a line while the invoice is `pending` |
-| `PUT` | `/invoice/invoices/:id/status` | Yes | Set an `approved` invoice to `invoiced` |
-
-Every route requires a Bearer session. Only an owner/admin or accounting clerk may call them. Lines can be added or removed only while the invoice is `pending`. Feature 9 owns this status route for `approved`. This feature allows `invoiced` on that same route when the invoice is already `approved` and has at least one line.
-
-**Service line request body:**
-
-```json
-{
-  "type": "service",
-  "timeEntryId": 10,
-  "description": "ABC"
-}
-```
-
-`type`, `timeEntryId`, and `description` are required. The time entry must be `Approved`, have an empty `invoicedItemId`, and belong to the invoice's project. The system copies `date` and hours from that entry. `quantity` is those hours. `rate` is the project-role rate, not the standard rate. `roleName` is that role's name. `total` is `quantity` multiplied by `rate`. For 60 hours at `100`, `total` is `600`. The system then sets that time entry's `status` to `Invoiced` and its `invoicedItemId` to the new line `id`. A sent `rate`, `quantity`, or `total` is ignored.
-
-**Expense line request body:**
-
-```json
-{
-  "type": "expense",
-  "date": "2026-11-20",
-  "description": "XYZ",
-  "total": 85.00
-}
-```
-
-`date`, `description`, and `total` are required. `total` must be greater than zero. `date` must not be after today. `quantity`, `rate`, `roleName`, and `timeEntryId` are empty. No time entry is linked.
-
-After a line is added or removed, invoice `hours` becomes the sum of service-line quantities on that invoice. An invoice with no service lines has hours `0`. An expense does not change `hours`.
-
-**Issue body:**
-
-```json
-{
-  "status": "invoiced"
-}
-```
-
-The invoice must be `approved` and have at least one line. A `pending` invoice is rejected.
-
-**Success response** (`201` on create, `200` on list):
-
-```json
-{
-  "id": 5,
-  "invoiceId": 20,
-  "type": "service",
-  "date": "2026-12-01",
-  "description": "ABC",
-  "roleName": "Programmer",
-  "quantity": 60,
-  "rate": 100,
-  "total": 600,
-  "timeEntryId": 10,
-  "createdAt": "2026-11-26T12:00:00.000Z",
-  "updatedAt": "2026-11-26T12:00:00.000Z"
-}
-```
-
-On an expense line, `quantity`, `rate`, `roleName`, and `timeEntryId` are `null`. A list is `200` with an array of those objects. An invoice with no lines returns `[]`. `DELETE` returns `200` with `{ "invoiceHours": 0 }` after the sum is recalculated. Removing a service line sets the linked time entry back to `Approved` and clears `invoicedItemId`.
-
-**Error response:** `{ "message": "Human-readable explanation." }`
-
-| Condition | Status | Message |
-|-----------|--------|---------|
-| Invoice is not `pending` when adding or removing a line | `400` | `"Lines can be changed only while the invoice is pending."` |
-| `type` is not `service` or `expense` | `400` | `"Type must be service or expense."` |
-| Service description is blank, or the time entry is missing | `400` | `"A service line requires a description and an approved time entry."` |
-| Time entry is not `Approved`, is already linked, or is on another project | `400` | `"Only approved time on this project can be billed."` |
-| Expense `total` is zero or less | `400` | `"Expense total must be greater than zero."` |
-| Expense `date` is after today, or expense date or description is missing | `400` | `"An expense requires a date, a description, and a total greater than zero."` |
-| Issue when status is not `approved` | `400` | `"Only an approved invoice can be issued."` |
-| Issue when the approved invoice has no lines | `400` | `"An invoice with no lines cannot be issued."` |
-| No invoice with that `id` | `404` | `"Invoice with id=999 not found."` |
-| No time entry with that `id` | `404` | `"Time entry with id=999 not found."` |
-| No line with that `id` | `404` | `"Line item with id=999 not found."` |
-| A project manager, a time-entry user, or a caller outside the business | `403` | `"You are not allowed to manage invoice lines."` |
-| No session | `401` | `"Authentication is required."` |
-
-## Screen Requirements
-
-### [View: Invoice lines] — route name `invoice-lines`
-
-* Route param: `invoiceId`. The page loads `GET /invoice/invoices/:invoiceId/line-items` and the invoice header.
-* Heading: **Invoice lines**
-* Shown from the **Invoice** screen with **Lines**. `MenuBar` shows it only for an owner/admin or accounting clerk.
-* Rows show **type**, **date**, **role**, **description**, **rate**, **hours**, and **total**. An expense row leaves role, rate, and hours blank.
-* The invoice **hours** shown on this page are the sum of the service quantities.
-* While the invoice is `pending`, two actions are shown. **Add service line** (`oc-cta`) opens a dialog with **Time entry** and **Description**. **Time entry** lists `Approved` entries on this project that are not yet billed. The clerk does not type the rate or the hours. **Save** calls `POST` with `type` `service`. **Add expense** opens a dialog with **Date**, **Description**, and **Total**. **Save** calls `POST` with `type` `expense`. **Cancel** closes either dialog.
-* While the invoice is `pending`, each row has **Remove** with `aria-label` **Remove line**. It calls `DELETE /invoice/line-items/:id`.
-* While the invoice is `approved` and has at least one line, **Issue invoice** is shown. It calls `PUT /invoice/invoices/:id/status` with `invoiced`. An owner/admin or accounting clerk may use it.
-* While the invoice is `approved` or `invoiced`, **Add service line**, **Add expense**, and **Remove** are hidden.
-* **Empty state:** **"No lines on this invoice yet."**
-* **Loading state:** a skeleton while the lines are loading.
-* **Error state:** `<v-alert type="error">` with the API `message`, including **"Only approved time on this project can be billed."**, **"Expense total must be greater than zero."**, **"Only an approved invoice can be issued."**, and **"An invoice with no lines cannot be issued."**
-* A project manager, a time-entry user, or a caller outside the business sees **"You are not allowed to manage invoice lines."** and no lines.
-* A caller with no session sees **"Authentication is required."** Login itself is out of scope for this feature.
-
 ## Key Entities
 
 - **Line item**: one service row or one expense row on an invoice; identified by a unique system `id`
@@ -327,6 +214,119 @@ The sheet names this entity "Inline Item" and lists type, date, quantity, rate, 
 * **When** an authorized accounting clerk attempts to add time entry `12` to invoice `20`
 * **Then** the system does not create a line
 * **And** time entry `12` stays `Approved`
+
+## Data Ownership
+
+- A line item belongs to one invoice.
+- A service line also claims one approved time entry.
+- Only an authorized owner/admin or accounting clerk may add, view, remove, or issue lines.
+- Callers outside the business MUST NOT read or change invoice lines.
+
+## API Requirements
+
+| Method | Endpoint | Auth | Purpose |
+|--------|----------|------|---------|
+| `POST` | `/invoice/invoices/:invoiceId/line-items` | Yes | Add a service line or an expense line |
+| `GET` | `/invoice/invoices/:invoiceId/line-items` | Yes | List lines on one invoice |
+| `DELETE` | `/invoice/line-items/:id` | Yes | Remove a line while the invoice is `pending` |
+| `PUT` | `/invoice/invoices/:id/status` | Yes | Set an `approved` invoice to `invoiced` |
+
+Every route requires a Bearer session. Only an owner/admin or accounting clerk may call them. Lines can be added or removed only while the invoice is `pending`. Feature 9 owns this status route for `approved`. This feature allows `invoiced` on that same route when the invoice is already `approved` and has at least one line.
+
+**Service line request body:**
+
+```json
+{
+  "type": "service",
+  "timeEntryId": 10,
+  "description": "ABC"
+}
+```
+
+`type`, `timeEntryId`, and `description` are required. The time entry must be `Approved`, have an empty `invoicedItemId`, and belong to the invoice's project. The system copies `date` and hours from that entry. `quantity` is those hours. `rate` is the project-role rate, not the standard rate. `roleName` is that role's name. `total` is `quantity` multiplied by `rate`. For 60 hours at `100`, `total` is `600`. The system then sets that time entry's `status` to `Invoiced` and its `invoicedItemId` to the new line `id`. A sent `rate`, `quantity`, or `total` is ignored.
+
+**Expense line request body:**
+
+```json
+{
+  "type": "expense",
+  "date": "2026-11-20",
+  "description": "XYZ",
+  "total": 85.00
+}
+```
+
+`date`, `description`, and `total` are required. `total` must be greater than zero. `date` must not be after today. `quantity`, `rate`, `roleName`, and `timeEntryId` are empty. No time entry is linked.
+
+After a line is added or removed, invoice `hours` becomes the sum of service-line quantities on that invoice. An invoice with no service lines has hours `0`. An expense does not change `hours`.
+
+**Issue body:**
+
+```json
+{
+  "status": "invoiced"
+}
+```
+
+The invoice must be `approved` and have at least one line. A `pending` invoice is rejected.
+
+**Success response** (`201` on create, `200` on list):
+
+```json
+{
+  "id": 5,
+  "invoiceId": 20,
+  "type": "service",
+  "date": "2026-12-01",
+  "description": "ABC",
+  "roleName": "Programmer",
+  "quantity": 60,
+  "rate": 100,
+  "total": 600,
+  "timeEntryId": 10,
+  "createdAt": "2026-11-26T12:00:00.000Z",
+  "updatedAt": "2026-11-26T12:00:00.000Z"
+}
+```
+
+On an expense line, `quantity`, `rate`, `roleName`, and `timeEntryId` are `null`. A list is `200` with an array of those objects. An invoice with no lines returns `[]`. `DELETE` returns `200` with `{ "invoiceHours": 0 }` after the sum is recalculated. Removing a service line sets the linked time entry back to `Approved` and clears `invoicedItemId`.
+
+**Error response:** `{ "message": "Human-readable explanation." }`
+
+| Condition | Status | Message |
+|-----------|--------|---------|
+| Invoice is not `pending` when adding or removing a line | `400` | `"Lines can be changed only while the invoice is pending."` |
+| `type` is not `service` or `expense` | `400` | `"Type must be service or expense."` |
+| Service description is blank, or the time entry is missing | `400` | `"A service line requires a description and an approved time entry."` |
+| Time entry is not `Approved`, is already linked, or is on another project | `400` | `"Only approved time on this project can be billed."` |
+| Expense `total` is zero or less | `400` | `"Expense total must be greater than zero."` |
+| Expense `date` is after today, or expense date or description is missing | `400` | `"An expense requires a date, a description, and a total greater than zero."` |
+| Issue when status is not `approved` | `400` | `"Only an approved invoice can be issued."` |
+| Issue when the approved invoice has no lines | `400` | `"An invoice with no lines cannot be issued."` |
+| No invoice with that `id` | `404` | `"Invoice with id=999 not found."` |
+| No time entry with that `id` | `404` | `"Time entry with id=999 not found."` |
+| No line with that `id` | `404` | `"Line item with id=999 not found."` |
+| A project manager, a time-entry user, or a caller outside the business | `403` | `"You are not allowed to manage invoice lines."` |
+| No session | `401` | `"Authentication is required."` |
+
+## Screen Requirements
+
+### [View: Invoice lines] — route name `invoice-lines`
+
+* Route param: `invoiceId`. The page loads `GET /invoice/invoices/:invoiceId/line-items` and the invoice header.
+* Heading: **Invoice lines**
+* Shown from the **Invoice** screen with **Lines**. `MenuBar` shows it only for an owner/admin or accounting clerk.
+* Rows show **type**, **date**, **role**, **description**, **rate**, **hours**, and **total**. An expense row leaves role, rate, and hours blank.
+* The invoice **hours** shown on this page are the sum of the service quantities.
+* While the invoice is `pending`, two actions are shown. **Add service line** (`oc-cta`) opens a dialog with **Time entry** and **Description**. **Time entry** lists `Approved` entries on this project that are not yet billed. The clerk does not type the rate or the hours. **Save** calls `POST` with `type` `service`. **Add expense** opens a dialog with **Date**, **Description**, and **Total**. **Save** calls `POST` with `type` `expense`. **Cancel** closes either dialog.
+* While the invoice is `pending`, each row has **Remove** with `aria-label` **Remove line**. It calls `DELETE /invoice/line-items/:id`.
+* While the invoice is `approved` and has at least one line, **Issue invoice** is shown. It calls `PUT /invoice/invoices/:id/status` with `invoiced`. An owner/admin or accounting clerk may use it.
+* While the invoice is `approved` or `invoiced`, **Add service line**, **Add expense**, and **Remove** are hidden.
+* **Empty state:** **"No lines on this invoice yet."**
+* **Loading state:** a skeleton while the lines are loading.
+* **Error state:** `<v-alert type="error">` with the API `message`, including **"Only approved time on this project can be billed."**, **"Expense total must be greater than zero."**, **"Only an approved invoice can be issued."**, and **"An invoice with no lines cannot be issued."**
+* A project manager, a time-entry user, or a caller outside the business sees **"You are not allowed to manage invoice lines."** and no lines.
+* A caller with no session sees **"Authentication is required."** Login itself is out of scope for this feature.
 
 ## Definition of Done
 

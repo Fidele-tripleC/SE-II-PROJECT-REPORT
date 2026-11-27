@@ -96,6 +96,125 @@
 - **SC-004**: An owner can approve a pending invoice that has at least one line, and a clerk cannot. A pending invoice with no lines cannot be approved
 - **SC-005**: Date and term cannot be changed after approval
 
+## Key Entities
+
+- **Invoice**: a bill for one project; identified by the invoice number (`id`); has a date, a 15- or 30-day term, a due date, total service hours, and a status
+
+## Initial Data Model
+
+### `invoices` table
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `id` | INTEGER PK | Auto-increment; invoice number; never updated |
+| `date` | DATE | Required; not after today; editable only while `pending` |
+| `term` | INTEGER | Required; `15` or `30`; defaults from the customer's `billingTerms` when omitted; editable only while `pending` |
+| `dueDate` | DATE | Required; `date` plus `term` days; recalculated when `date` or `term` changes |
+| `hours` | DECIMAL(8,2) | Required; `0` on create; Feature 10 sets the sum of service-line quantities |
+| `customerId` | INTEGER FK | Required; references `customers.id`; must match the project; never updated |
+| `projectId` | INTEGER FK | Required; references `projects.id`; never updated |
+| `status` | STRING(20) | Required; `pending` on create; owner/admin may set `approved`; Feature 10 may set `invoiced` |
+| `createdAt` | DATETIME | Required; set on create |
+| `updatedAt` | DATETIME | Required; set on create and whenever the row changes |
+
+`dueDate` is stored because the class invoice prints Invoice Due Date. The sheet does not have a separate due-date column.
+
+## Gherkin AC
+
+### US-9.1 — Open an invoice
+
+#### Scenario: Clerk opens an invoice using the customer's terms
+
+* **Given** customer `1` ABC has billing terms `30`
+* **And** project `4` belongs to customer `1`
+* **And** an authorized accounting clerk is using the system
+* **And** today is `2026-11-26`
+* **When** the clerk opens an invoice for project `4` and customer `1` dated `2026-11-26` with no term and saves
+* **Then** the system creates an invoice
+* **And** the invoice has a unique invoice number
+* **And** `term` is `30`
+* **And** `dueDate` is `2026-12-26`
+* **And** `hours` is `0`
+* **And** `status` is `pending`
+
+#### Scenario: Clerk chooses a 15-day term
+
+* **Given** project `4` belongs to customer `1`
+* **When** an authorized accounting clerk opens an invoice for project `4` dated `2026-11-01` with term `15`
+* **Then** `term` is `15`
+* **And** `dueDate` is `2026-11-16`
+
+#### Scenario: Clerk cannot bill a different customer
+
+* **Given** project `4` belongs to customer `1`
+* **When** an authorized accounting clerk attempts to open an invoice for project `4` and customer `2`
+* **Then** the system does not create an invoice
+* **And** the system rejects the save with a validation error
+
+#### Scenario: Clerk cannot use a term other than 15 or 30
+
+* **Given** project `4` belongs to customer `1`
+* **When** an authorized accounting clerk attempts to open an invoice with term `45`
+* **Then** the system does not create an invoice
+* **And** the system rejects the save with a validation error
+
+### US-9.2 — View an invoice
+
+#### Scenario: Clerk views an invoice
+
+* **Given** invoice `20` is pending for customer `1` and project `4`, dated `2026-11-26`, term `30`, due `2026-12-26`, hours `0`
+* **When** an authorized accounting clerk views invoice `20`
+* **Then** the system displays those stored values
+* **And** the invoice number `20` is shown
+
+#### Scenario: Clerk lists invoices for a project
+
+* **Given** project `4` has invoices `20` and `21`
+* **When** an authorized accounting clerk lists invoices for project `4`
+* **Then** the list includes both invoices
+* **And** each row includes invoice number, date, customer, status, and hours
+
+#### Scenario: A project manager cannot view an invoice
+
+* **Given** invoice `20` exists
+* **When** an authorized project manager views invoice `20`
+* **Then** the system does not display the invoice
+* **And** the system rejects the request as not authorized
+
+### US-9.3 — Approve an invoice
+
+#### Scenario: Owner approves a pending invoice that has a line
+
+* **Given** invoice `20` is `pending`
+* **And** invoice `20` has one line
+* **And** an authorized owner/admin is using the system
+* **When** the owner sets the status to `approved`
+* **Then** a subsequent view of invoice `20` returns `approved`
+
+#### Scenario: Owner cannot approve an invoice with no lines
+
+* **Given** invoice `20` is `pending` and has no lines
+* **And** an authorized owner/admin is using the system
+* **When** the owner attempts to set the status to `approved`
+* **Then** the system does not change the status
+* **And** the status remains `pending`
+* **And** the system rejects the save with a validation error
+
+#### Scenario: Clerk cannot approve an invoice
+
+* **Given** invoice `20` is `pending`
+* **When** an authorized accounting clerk attempts to set the status to `approved`
+* **Then** the system does not change the status
+* **And** the status remains `pending`
+* **And** the system rejects the save as not authorized
+
+#### Scenario: Approved invoice dates cannot be changed
+
+* **Given** invoice `20` is `approved` with term `30`
+* **When** an authorized accounting clerk attempts to change the term to `15`
+* **Then** the system does not save the change
+* **And** the term remains `30`
+
 ## Data Ownership
 
 - An invoice belongs to one project and that project's customer.
@@ -215,125 +334,6 @@ The invoice must already be `pending` and must have at least one line. `invoiced
 * **Loading state:** a skeleton while the invoice is loading.
 * **Error state:** `<v-alert type="error">` with the API `message`, including **"Date and term can be changed only while the invoice is pending."**, **"You are not allowed to approve an invoice."**, **"An invoice with no lines cannot be approved."**, and **"Invoice with id=999 not found."**
 * No delete control and no control that sets `invoiced`.
-
-## Key Entities
-
-- **Invoice**: a bill for one project; identified by the invoice number (`id`); has a date, a 15- or 30-day term, a due date, total service hours, and a status
-
-## Initial Data Model
-
-### `invoices` table
-
-| Field | Type | Rules |
-|-------|------|-------|
-| `id` | INTEGER PK | Auto-increment; invoice number; never updated |
-| `date` | DATE | Required; not after today; editable only while `pending` |
-| `term` | INTEGER | Required; `15` or `30`; defaults from the customer's `billingTerms` when omitted; editable only while `pending` |
-| `dueDate` | DATE | Required; `date` plus `term` days; recalculated when `date` or `term` changes |
-| `hours` | DECIMAL(8,2) | Required; `0` on create; Feature 10 sets the sum of service-line quantities |
-| `customerId` | INTEGER FK | Required; references `customers.id`; must match the project; never updated |
-| `projectId` | INTEGER FK | Required; references `projects.id`; never updated |
-| `status` | STRING(20) | Required; `pending` on create; owner/admin may set `approved`; Feature 10 may set `invoiced` |
-| `createdAt` | DATETIME | Required; set on create |
-| `updatedAt` | DATETIME | Required; set on create and whenever the row changes |
-
-`dueDate` is stored because the class invoice prints Invoice Due Date. The sheet does not have a separate due-date column.
-
-## Gherkin AC
-
-### US-9.1 — Open an invoice
-
-#### Scenario: Clerk opens an invoice using the customer's terms
-
-* **Given** customer `1` ABC has billing terms `30`
-* **And** project `4` belongs to customer `1`
-* **And** an authorized accounting clerk is using the system
-* **And** today is `2026-11-26`
-* **When** the clerk opens an invoice for project `4` and customer `1` dated `2026-11-26` with no term and saves
-* **Then** the system creates an invoice
-* **And** the invoice has a unique invoice number
-* **And** `term` is `30`
-* **And** `dueDate` is `2026-12-26`
-* **And** `hours` is `0`
-* **And** `status` is `pending`
-
-#### Scenario: Clerk chooses a 15-day term
-
-* **Given** project `4` belongs to customer `1`
-* **When** an authorized accounting clerk opens an invoice for project `4` dated `2026-11-01` with term `15`
-* **Then** `term` is `15`
-* **And** `dueDate` is `2026-11-16`
-
-#### Scenario: Clerk cannot bill a different customer
-
-* **Given** project `4` belongs to customer `1`
-* **When** an authorized accounting clerk attempts to open an invoice for project `4` and customer `2`
-* **Then** the system does not create an invoice
-* **And** the system rejects the save with a validation error
-
-#### Scenario: Clerk cannot use a term other than 15 or 30
-
-* **Given** project `4` belongs to customer `1`
-* **When** an authorized accounting clerk attempts to open an invoice with term `45`
-* **Then** the system does not create an invoice
-* **And** the system rejects the save with a validation error
-
-### US-9.2 — View an invoice
-
-#### Scenario: Clerk views an invoice
-
-* **Given** invoice `20` is pending for customer `1` and project `4`, dated `2026-11-26`, term `30`, due `2026-12-26`, hours `0`
-* **When** an authorized accounting clerk views invoice `20`
-* **Then** the system displays those stored values
-* **And** the invoice number `20` is shown
-
-#### Scenario: Clerk lists invoices for a project
-
-* **Given** project `4` has invoices `20` and `21`
-* **When** an authorized accounting clerk lists invoices for project `4`
-* **Then** the list includes both invoices
-* **And** each row includes invoice number, date, customer, status, and hours
-
-#### Scenario: A project manager cannot view an invoice
-
-* **Given** invoice `20` exists
-* **When** an authorized project manager views invoice `20`
-* **Then** the system does not display the invoice
-* **And** the system rejects the request as not authorized
-
-### US-9.3 — Approve an invoice
-
-#### Scenario: Owner approves a pending invoice that has a line
-
-* **Given** invoice `20` is `pending`
-* **And** invoice `20` has one line
-* **And** an authorized owner/admin is using the system
-* **When** the owner sets the status to `approved`
-* **Then** a subsequent view of invoice `20` returns `approved`
-
-#### Scenario: Owner cannot approve an invoice with no lines
-
-* **Given** invoice `20` is `pending` and has no lines
-* **And** an authorized owner/admin is using the system
-* **When** the owner attempts to set the status to `approved`
-* **Then** the system does not change the status
-* **And** the status remains `pending`
-* **And** the system rejects the save with a validation error
-
-#### Scenario: Clerk cannot approve an invoice
-
-* **Given** invoice `20` is `pending`
-* **When** an authorized accounting clerk attempts to set the status to `approved`
-* **Then** the system does not change the status
-* **And** the status remains `pending`
-* **And** the system rejects the save as not authorized
-
-#### Scenario: Approved invoice dates cannot be changed
-
-* **Given** invoice `20` is `approved` with term `30`
-* **When** an authorized accounting clerk attempts to change the term to `15`
-* **Then** the system does not save the change
-* **And** the term remains `30`
 
 ## Definition of Done
 
